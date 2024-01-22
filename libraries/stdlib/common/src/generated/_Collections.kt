@@ -3193,6 +3193,29 @@ public inline fun <T> Iterable<T>.partition(predicate: (T) -> Boolean): Pair<Lis
 }
 
 /**
+ * Splits the original collection into a pair of lists,
+ * where *first* list contains elements for which [predicate] yielded `true`,
+ * while *second* list contains elements for which [predicate] yielded `false`.
+ *
+ * @param [predicate] function that takes the index of an element and the element itself
+ * and returns the result of predicate evaluation on the element.
+ *
+ * @sample samples.collections.Iterables.Operations.partitionIndexed TODO not added yet
+ */
+public inline fun <T> Iterable<T>.partitionIndexed(predicate: (index: Int, T) -> Boolean): Pair<List<T>, List<T>> {
+    val first = ArrayList<T>()
+    val second = ArrayList<T>()
+    forEachIndexed { index, element ->
+        if (predicate(index, element)) {
+            first.add(element)
+        } else {
+            second.add(element)
+        }
+    }
+    return Pair(first, second)
+}
+
+/**
  * Returns a list containing all elements of the original collection and then the given [element].
  */
 public operator fun <T> Iterable<T>.plus(element: T): List<T> {
