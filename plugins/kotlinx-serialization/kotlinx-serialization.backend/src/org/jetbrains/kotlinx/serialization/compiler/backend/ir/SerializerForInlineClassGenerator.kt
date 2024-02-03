@@ -42,6 +42,7 @@ class SerializerForInlineClassGenerator(
 
         // inlineEncoder.encodeInt/String/SerializableValue
         val elementCall = formEncodeDecodePropertyCall(irGet(inlineEncoder), saveFunc.dispatchReceiverParameter!!, property, {innerSerial, sti ->
+            log("Shreck mark")
             val f =
                 encoderClass.functionByName("${CallingConventions.encode}${sti.elementMethodPrefix}SerializableValue")
             f to listOf(
@@ -74,6 +75,7 @@ class SerializerForInlineClassGenerator(
         val property = serializableProperties.first()
         val inlinedType = property.type
         val actualCall = formEncodeDecodePropertyCall(inlineDecoder, loadFunc.dispatchReceiverParameter!!, property, { innerSerial, sti ->
+            log("Shreck mark")
             decoderClass.functionByName( "${CallingConventions.decode}${sti.elementMethodPrefix}SerializableValue") to listOf(innerSerial)
         }, {
             decoderClass.functionByName("${CallingConventions.decode}${it.elementMethodPrefix}") to listOf()

@@ -5,8 +5,10 @@
 
 package org.jetbrains.kotlinx.serialization.compiler.backend.ir
 
+import org.jetbrains.kotlin.backend.jvm.ir.upperBound
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.expressions.IrClassReference
 import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
@@ -16,16 +18,13 @@ import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames
-import org.jetbrains.kotlinx.serialization.compiler.resolve.SerializationAnnotations
-import org.jetbrains.kotlinx.serialization.compiler.resolve.SerializationPackages
-import org.jetbrains.kotlinx.serialization.compiler.resolve.SpecialBuiltins
 import org.jetbrains.kotlinx.serialization.compiler.resolve.*
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerializersClassIds.contextSerializerId
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerializersClassIds.enumSerializerId
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerializersClassIds.objectSerializerId
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerializersClassIds.polymorphicSerializerId
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerializersClassIds.referenceArraySerializerId
+import java.io.File
 
 class IrSerialTypeInfo(
     val property: IrSerializableProperty,
@@ -39,16 +38,32 @@ interface SerializationBaseContext {
     val runtimeHasEnumSerializerFactoryFunctions: Boolean
 }
 
+fun log(s: String) {
+    val f = File("/home/shreckye/Desktop/kotlin-compiler-log.txt")
+    if (!f.exists()) f.createNewFile()
+    f.appendText(s + "\n\n")
+}
+
+@OptIn(ObsoleteDescriptorBasedAPI::class) // TODO remove
 fun BaseIrGenerator.getIrSerialTypeInfo(property: IrSerializableProperty, ctx: SerializationBaseContext): IrSerialTypeInfo {
     fun SerializableInfo(serializer: IrClassSymbol?) =
         IrSerialTypeInfo(property, if (property.type.isNullable()) "Nullable" else "", serializer)
 
+    val s1 = "Property: $property ${property.name}"
+    log(s1)
     val T = property.type
+    val s2 = "Property type: $T ${T.classFqName} ${T.toKotlinType()}"
+    log(s2)
     property.serializableWith(ctx)?.let { return SerializableInfo(it) }
     findAddOnSerializer(T, ctx)?.let { return SerializableInfo(it) }
     T.overriddenSerializer?.let { return SerializableInfo(it) }
+    log("Shreck mark sti generated")
     return when {
-        T.isTypeParameter() -> IrSerialTypeInfo(property, if (property.type.isMarkedNullable()) "Nullable" else "", null)
+        T.isTypeParameter() -> IrSerialTypeInfo(property, if (with(property.type) {
+                isMarkedNullable() || upperBound.also {
+                    log("Upper bound: $it ${it.classFqName} ${it.toKotlinType()} ${it::class} ${it.isNullable()} ${it.isMarkedNullable()} ${(it as IrSimpleType).classifier}")
+                }.isMarkedNullable() // TODO or `isNullable`?
+            }) "Nullable" else "", null)
         T.isPrimitiveType() -> IrSerialTypeInfo(
             property,
             T.classFqName!!.asString().removePrefix("kotlin.")

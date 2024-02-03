@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.backend.jvm.functionByName
 import org.jetbrains.kotlin.backend.jvm.ir.fileParent
 import org.jetbrains.kotlin.backend.jvm.ir.representativeUpperBound
 import org.jetbrains.kotlin.descriptors.ClassKind
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.declarations.*
@@ -493,7 +494,10 @@ abstract class BaseIrGenerator(private val currentClass: IrClass, final override
         val nullableSerClass = compilerContext.referenceProperties(SerialEntityNames.wrapIntoNullableCallableId).single()
         if (serializerClassOriginal == null) {
             if (genericIndex == null) return null
-            return genericGetter?.invoke(genericIndex, kType)
+            @OptIn(ObsoleteDescriptorBasedAPI::class) // TODO remove
+            return genericGetter?.invoke(genericIndex, kType).also {
+                log("genericGetter called: $genericIndex ${kType.toKotlinType()} $it ${it?.type?.toKotlinType()}")
+            }
         }
         if (serializerClassOriginal.owner.kind == ClassKind.OBJECT) {
             return irGetObject(serializerClassOriginal)
