@@ -30,6 +30,8 @@ object SerializationAnnotations {
     val serialNameAnnotationFqName = FqName("kotlinx.serialization.SerialName")
     val requiredAnnotationFqName = FqName("kotlinx.serialization.Required")
     val serialTransientFqName = FqName("kotlinx.serialization.Transient")
+    val useSerialPolymorphicNumbersAnnotationFqName = FqName("kotlinx.serialization.UseSerialPolymorphicNumbers")
+    val serialPolymorphicNumberAnnotationFqName = FqName("kotlinx.serialization.SerialPolymorphicNumber")
 
     // Also implicitly used in kotlin-native.compiler.backend.native/CodeGenerationInfo.kt
     val serialInfoFqName = FqName("kotlinx.serialization.SerialInfo")

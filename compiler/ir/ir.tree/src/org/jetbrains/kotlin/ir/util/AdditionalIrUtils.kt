@@ -161,6 +161,9 @@ fun List<IrConstructorCall>.hasAnnotation(fqName: FqName): Boolean =
 fun List<IrConstructorCall>.findAnnotation(fqName: FqName): IrConstructorCall? =
     firstOrNull { it.annotationClass.hasEqualFqName(fqName) }
 
+fun List<IrConstructorCall>.findAnnotations(fqName: FqName): List<IrConstructorCall> =
+    filter { it.annotationClass.hasEqualFqName(fqName) }
+
 val IrDeclaration.fileEntry: IrFileEntry
     get() = parent.let {
         when (it) {

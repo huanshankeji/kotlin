@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlinx.serialization.compiler.backend.ir
 
+import org.jetbrains.kotlin.backend.jvm.ir.getIntConstArgument
 import org.jetbrains.kotlin.backend.jvm.ir.getStringConstArgument
 import org.jetbrains.kotlin.backend.jvm.ir.representativeUpperBound
 import org.jetbrains.kotlin.descriptors.CallableMemberDescriptor
@@ -12,10 +13,7 @@ import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
-import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.expressions.IrGetEnumValue
-import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
+import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrConstructorSymbol
@@ -228,6 +226,13 @@ internal val List<IrConstructorCall>.hasAnySerialAnnotation: Boolean
 internal val List<IrConstructorCall>.serialNameValue: String?
     get() = findAnnotation(SerializationAnnotations.serialNameAnnotationFqName)?.getStringConstArgument(0) // @SerialName("foo")
 
+internal val List<IrConstructorCall>.useSerialPolymorphicNumbers: Boolean
+    get() = hasAnnotation(SerializationAnnotations.useSerialPolymorphicNumbersAnnotationFqName)
+
+internal val List<IrConstructorCall>.serialPolymorphicNumberPairs: List<Pair<IrType, Int>>
+    get() = findAnnotations(SerializationAnnotations.serialPolymorphicNumberAnnotationFqName).map {
+        it.getClassTypeArgument(0)!! to it.getIntConstArgument(1)
+    }
 
 val IrClass.primaryConstructorOrFail get() = primaryConstructor ?: error("$this is expected to have a primary constructor")
 

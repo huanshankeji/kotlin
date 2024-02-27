@@ -20,7 +20,9 @@ import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
 import org.jetbrains.kotlin.ir.expressions.impl.IrDelegatingConstructorCallImpl
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
+import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.ClassId
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.util.OperatorNameConventions
@@ -28,10 +30,12 @@ import org.jetbrains.kotlin.utils.getOrPutNullable
 import org.jetbrains.kotlinx.serialization.compiler.extensions.SerializationPluginContext
 import org.jetbrains.kotlinx.serialization.compiler.resolve.*
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames.CACHED_DESCRIPTOR_FIELD_NAME
+import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames.KCLASS_NAME_CLASS_ID
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames.LOAD
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames.MISSING_FIELD_EXC
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames.SAVE
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames.SERIAL_DESC_FIELD
+import org.jetbrains.kotlin.backend.jvm.ir.kClassReference
 
 class SerializableIrGenerator(
     val irClass: IrClass,
@@ -50,6 +54,15 @@ class SerializableIrGenerator(
             Name.identifier(SerialEntityNames.SERIAL_DESCRIPTOR_CLASS_IMPL)
         )
     )!!.owner
+
+    private val mapOfVarargFunction = compilerContext.referenceFunctions(
+        CallableId(FqName("kotlin.collections"), Name.identifier("mapOf"))
+    ).single { it.owner.valueParameters.first().isVararg }
+    val kotlinPackageFqName = FqName("kotlin")
+    private val pairClass = compilerContext.referenceClass(ClassId(kotlinPackageFqName, Name.identifier("Pair")))!!.owner
+    private val pairCtor = pairClass.constructors.single { it.isPrimary }
+    private val intClass = compilerContext.referenceClass(ClassId(kotlinPackageFqName, Name.identifier("Int")))!!.owner
+    private val kClassClass = compilerContext.referenceClass(KCLASS_NAME_CLASS_ID)!!.owner
 
     private val addElementFun =
         serialDescriptorImplClass.findDeclaration<IrFunction> { it.name.toString() == CallingConventions.addElement }!!.symbol
@@ -227,9 +240,24 @@ class SerializableIrGenerator(
     private fun IrBlockBodyBuilder.getInstantiateDescriptorExpr(): IrExpression {
         val classConstructors = serialDescriptorImplClass.constructors
         val serialClassDescImplCtor = classConstructors.single { it.isPrimary }.symbol
+        val irClassAnnotations = irClass.annotations
         return irInvoke(
-            null, serialClassDescImplCtor,
-            irString(irClass.serialName()), irNull(), irInt(properties.serializableProperties.size)
+            null,
+            serialClassDescImplCtor,
+            irString(irClass.serialName()),
+            irNull(),
+            irInt(properties.serializableProperties.size),
+            irVararg(serialDescriptorClass.defaultType, emptyList()),
+            irBoolean(irClassAnnotations.useSerialPolymorphicNumbers),
+            irInvoke(
+                null,
+                mapOfVarargFunction,
+                irVararg(
+                    pairClass.typeWith(kClassClass.defaultType, intClass.defaultType),
+                    irClassAnnotations.serialPolymorphicNumberPairs.map {
+                        irInvoke(null, pairCtor.symbol, kClassReference(it.first), irInt(it.second))
+                    })
+            )
         )
     }
 
