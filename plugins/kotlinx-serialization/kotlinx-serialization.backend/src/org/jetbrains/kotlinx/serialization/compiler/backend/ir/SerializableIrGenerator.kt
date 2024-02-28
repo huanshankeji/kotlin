@@ -6,6 +6,7 @@
 package org.jetbrains.kotlinx.serialization.compiler.backend.ir
 
 import org.jetbrains.kotlin.backend.common.lower.irThrow
+import org.jetbrains.kotlin.backend.jvm.ir.kClassReference
 import org.jetbrains.kotlin.backend.jvm.lower.isJvmOptimizableDelegate
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
@@ -35,7 +36,6 @@ import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames.LO
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames.MISSING_FIELD_EXC
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames.SAVE
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames.SERIAL_DESC_FIELD
-import org.jetbrains.kotlin.backend.jvm.ir.kClassReference
 
 class SerializableIrGenerator(
     val irClass: IrClass,
@@ -57,7 +57,7 @@ class SerializableIrGenerator(
 
     private val mapOfVarargFunction = compilerContext.referenceFunctions(
         CallableId(FqName("kotlin.collections"), Name.identifier("mapOf"))
-    ).single { it.owner.valueParameters.first().isVararg }
+    ).single { it.owner.valueParameters.firstOrNull()?.isVararg ?: false }
     val kotlinPackageFqName = FqName("kotlin")
     private val pairClass = compilerContext.referenceClass(ClassId(kotlinPackageFqName, Name.identifier("Pair")))!!.owner
     private val pairCtor = pairClass.constructors.single { it.isPrimary }
@@ -247,7 +247,6 @@ class SerializableIrGenerator(
             irString(irClass.serialName()),
             irNull(),
             irInt(properties.serializableProperties.size),
-            irVararg(serialDescriptorClass.defaultType, emptyList()),
             irBoolean(irClassAnnotations.useSerialPolymorphicNumbers),
             irInvoke(
                 null,
